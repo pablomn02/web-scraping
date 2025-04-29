@@ -43,3 +43,78 @@ img[src=""] {
 .animate-pulse {
     animation: pulseGlow 1.5s ease-in-out infinite;
 }
+
+/* Estilos para el loader */
+.loader {
+    border: 8px solid #e5e7eb; /* Gray-200 */
+    border-top: 8px solid #2563eb; /* Blue-600 */
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Animación para la aparición de los resultados */
+.animate-fadeIn {
+    animation: fadeIn 0.5s ease-in;
+}
+
+/* Estilo atractivo para botón "Ver Producto" */
+.ver-producto {
+    background-color: #3b82f6;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 9999px;
+    font-weight: 600;
+    text-align: center;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    display: inline-block;
+}
+
+.ver-producto:hover {
+    background-color: #2563eb;
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.5);
+}
+
+/* Estilo para el contenedor de cada producto */
+#results .bg-white {
+    transition: transform 0.3s ease, box-shadow 0.3s ease; /* Aplicar transición suave */
+}
+
+#results .bg-white:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); /* Sombra suave al hacer hover */
+    transform: translateY(-5px); /* Desplazamiento sutil hacia arriba */
+}
+
+/* Estilos para la imagen del producto */
+#results .bg-white img {
+    transition: transform 0.3s ease; /* Efecto de transición suave solo en la imagen */
+}
+
+#results .bg-white:hover img {
+    transform: scale(1.05); /* Aumentar el tamaño de la imagen al hacer hover */
+}
+
+/* Ajustar la transición de las imágenes al hacer hover */
+#results .bg-white img {
+    object-fit: contain;
+    height: 200px; /* Ajustar el tamaño de la imagen */
+}
+
+/* Asegurarse de que el contenedor del producto sea flexible y consistente */
+#results .bg-white {
+    display: flex;
+    flex-direction: column;
+    min-height: 400px;
+    justify-content: flex-start; /* Alinea los elementos al principio */
+}
+
+/* Diseño responsive para imágenes dentro de los productos */
+@media screen and (max-width: 768px) {
+    #results .bg-white img {
+        height: 180px; /* Ajuste para pantallas más pequeñas */
+    }
+}

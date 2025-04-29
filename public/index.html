@@ -23,11 +23,11 @@
                     type="submit"
                     class="bg-blue-600 text-white p-4 rounded-xl hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200"
                 >
-                    Scrapear
+                    Buscar
                 </button>
             </div>
         </form>
-        <div class="mb-6 flex items-center justify-center">
+        <div id="sortContainer" class="mb-6 flex items-center justify-center hidden">
             <label for="sortSelect" class="text-gray-700 font-medium mr-3">Ordenar por:</label>
             <select id="sortSelect" class="p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-gray-700 transition-all duration-200">
                 <option value="none">Sin ordenar</option>
@@ -35,18 +35,39 @@
                 <option value="priceDesc">Precio: Mayor a Menor</option>
             </select>
         </div>
+        <div id="loader" class="hidden flex items-center justify-center col-span-full">
+            <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 border-t-blue-600 h-12 w-12"></div>
+            <p class="ml-3 text-gray-500">Cargando productos...</p>
+        </div>
         <div id="results" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn"></div>
     </div>
 
     <script>
         let products = []; // Almacenar productos globalmente para reordenar
 
+        // Función para mostrar u ocultar el loader
+        function toggleLoader(show) {
+            const loader = document.getElementById('loader');
+            if (loader) {
+                loader.classList.toggle('hidden', !show);
+                loader.classList.toggle('flex', show);
+            }
+        }
+
+        // Función para mostrar u ocultar el contenedor de ordenación
+        function toggleSortContainer(show) {
+            const sortContainer = document.getElementById('sortContainer');
+            if (sortContainer) {
+                sortContainer.classList.toggle('hidden', !show);
+                sortContainer.classList.toggle('flex', show);
+            }
+        }
+
         // Función para convertir precio a número
         function parsePrice(price) {
-            if (!price) return Infinity; // Sin precio, poner al final
-            // Eliminar símbolo de euro y espacios, reemplazar coma por punto
+            if (!price) return Infinity;
             const cleanPrice = price.replace(/[^\d,]/g, '').replace(',', '.');
-            return parseFloat(cleanPrice) || Infinity; // Convertir a número o Infinity si falla
+            return parseFloat(cleanPrice) || Infinity;
         }
 
         // Función para ordenar productos
@@ -65,51 +86,63 @@
             const resultsDiv = document.getElementById('results');
             if (!Array.isArray(products) || products.length === 0) {
                 resultsDiv.innerHTML = '<p class="text-red-500 text-center col-span-full">No se encontraron productos en la página.</p>';
+                toggleSortContainer(false);
                 return;
             }
             resultsDiv.innerHTML = products.map(product => `
                 <div class="bg-white p-4 rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300">
-                    <img src="${product.image || ''}" alt="${product.title}" class="w-full h-48 object-contain mb-4 rounded-lg">
+                    <img src="${product.image || ''}" alt="${product.title}" class="w-full h-48 object-contain mb-4 rounded-lg transition-transform duration-300 hover:scale-105">
                     <h2 class="text-lg font-semibold text-gray-800 line-clamp-2">${product.title}</h2>
                     <p class="text-gray-600 font-medium mt-2">${product.price || 'Precio no disponible'}</p>
-                    <a href="${product.link || '#'}" target="_blank" class="inline-block mt-3 text-blue-600 hover:text-blue-800 font-medium transition-colors">Ver Producto</a>
-                </div>
-            `).join('');
+                    <a href="${product.link || '#'}" target="_blank" class="ver-producto mt-3 inline-block"><span>Ver Producto</span></a>
+                </div>`).join('');
+
+            toggleSortContainer(true); // Mostrar el contenedor de ordenación cuando hay productos
         }
 
-        // Manejar envío del formulario
-        document.getElementById('scrapeForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const url = document.getElementById('urlInput').value;
-            const resultsDiv = document.getElementById('results');
-            resultsDiv.innerHTML = '<p class="text-gray-500 text-center col-span-full animate-pulse">Cargando...</p>';
+        // Esperar a que el DOM esté listo
+        document.addEventListener('DOMContentLoaded', () => {
+            // Manejar envío del formulario
+            document.getElementById('scrapeForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const url = document.getElementById('urlInput').value;
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.innerHTML = ''; // Limpiar resultados anteriores
+                toggleLoader(true); // Mostrar loader
+                toggleSortContainer(false); // Ocultar contenedor de ordenación al iniciar nueva búsqueda
 
-            try {
-                const response = await fetch('http://localhost:3000/scrape', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url })
-                });
-                products = await response.json();
+                try {
+                    const response = await fetch('http://localhost:3000/scrape', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url })
+                    });
+                    products = await response.json();
 
-                if (!Array.isArray(products)) {
-                    resultsDiv.innerHTML = '<p class="text-red-500 text-center col-span-full">Error: No se encontraron productos o la página no es compatible.</p>';
-                    return;
+                    if (!Array.isArray(products)) {
+                        resultsDiv.innerHTML = '<p class="text-red-500 text-center col-span-full">Error: No se encontraron productos o la página no es compatible.</p>';
+                        toggleLoader(false);
+                        toggleSortContainer(false);
+                        return;
+                    }
+
+                    const sortOption = document.getElementById('sortSelect').value;
+                    const sortedProducts = sortProducts(products, sortOption);
+                    displayProducts(sortedProducts);
+                    toggleLoader(false);
+                } catch (error) {
+                    resultsDiv.innerHTML = `<p class="text-red-500 text-center col-span-full">Error: ${error.message}</p>`;
+                    toggleLoader(false);
+                    toggleSortContainer(false);
                 }
+            });
 
+            // Manejar cambio en el selector de orden
+            document.getElementById('sortSelect').addEventListener('change', () => {
                 const sortOption = document.getElementById('sortSelect').value;
                 const sortedProducts = sortProducts(products, sortOption);
                 displayProducts(sortedProducts);
-            } catch (error) {
-                resultsDiv.innerHTML = `<p class="text-red-500 text-center col-span-full">Error: ${error.message}</p>`;
-            }
-        });
-
-        // Manejar cambio en el selector de orden
-        document.getElementById('sortSelect').addEventListener('change', () => {
-            const sortOption = document.getElementById('sortSelect').value;
-            const sortedProducts = sortProducts(products, sortOption);
-            displayProducts(sortedProducts);
+            });
         });
     </script>
 </body>
