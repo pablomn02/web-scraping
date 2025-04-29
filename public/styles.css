@@ -1,9 +1,34 @@
 /* Estilos personalizados para complementar Tailwind CSS */
 body {
-    font-family: 'Arial', sans-serif;
+    font-family: 'Inter', sans-serif;
 }
 
-#results img {
-    max-width: 100%;
-    height: auto;
+/* Animación de fade-in para resultados */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* Estilo para imágenes sin fuente */
+img[src=""] {
+    display: none;
+}
+
+/* Ajustar altura de tarjetas para consistencia */
+.grid > div {
+    display: flex;
+    flex-direction: column;
+    min-height: 400px;
+}
+
+/* Limitar líneas de texto en títulos */
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }

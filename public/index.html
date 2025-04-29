@@ -3,39 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web Scraper</title>
+    <title>Amazon Web Scraper</title>
     <link href="styles.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4">
-    <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl">
-        <h1 class="text-2xl font-bold mb-4 text-center">Web Scraper</h1>
-        <form id="scrapeForm" class="mb-4">
-            <div class="flex flex-col sm:flex-row gap-2">
+<body class="bg-gradient-to-br from-blue-50 to-gray-100 min-h-screen flex flex-col items-center justify-center p-6">
+    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-4xl transform transition-all duration-300">
+        <h1 class="text-4xl font-bold text-center text-gray-800 mb-6">Amazon Web Scraper</h1>
+        <form id="scrapeForm" class="mb-6">
+            <div class="flex flex-col sm:flex-row gap-4">
                 <input
                     type="url"
                     id="urlInput"
-                    placeholder="Introduce una URL de Amazon (ej., búsqueda)"
-                    class="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Introduce una URL de Amazon (ej., búsqueda u ofertas)"
+                    class="flex-1 p-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-gray-700 placeholder-gray-400 transition-all duration-200"
                     required
                 >
                 <button
                     type="submit"
-                    class="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600 transition"
+                    class="bg-blue-600 text-white p-4 rounded-xl hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200"
                 >
                     Scrapear
                 </button>
             </div>
         </form>
-        <div id="results" class="grid gap-4"></div>
+        <div class="mb-6 flex items-center justify-center">
+            <label for="sortSelect" class="text-gray-700 font-medium mr-3">Ordenar por:</label>
+            <select id="sortSelect" class="p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-gray-700 transition-all duration-200">
+                <option value="none">Sin ordenar</option>
+                <option value="priceAsc">Precio: Menor a Mayor</option>
+                <option value="priceDesc">Precio: Mayor a Menor</option>
+            </select>
+        </div>
+        <div id="results" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn"></div>
     </div>
 
     <script>
+        let products = []; // Almacenar productos globalmente para reordenar
+
+        // Función para convertir precio a número
+        function parsePrice(price) {
+            if (!price) return Infinity; // Sin precio, poner al final
+            // Eliminar símbolo de euro y espacios, reemplazar coma por punto
+            const cleanPrice = price.replace(/[^\d,]/g, '').replace(',', '.');
+            return parseFloat(cleanPrice) || Infinity; // Convertir a número o Infinity si falla
+        }
+
+        // Función para ordenar productos
+        function sortProducts(products, sortOption) {
+            if (sortOption === 'none') return products;
+            return [...products].sort((a, b) => {
+                const priceA = parsePrice(a.price);
+                const priceB = parsePrice(b.price);
+                if (sortOption === 'priceAsc') return priceA - priceB;
+                return priceB - priceA;
+            });
+        }
+
+        // Función para mostrar productos
+        function displayProducts(products) {
+            const resultsDiv = document.getElementById('results');
+            if (!Array.isArray(products) || products.length === 0) {
+                resultsDiv.innerHTML = '<p class="text-red-500 text-center col-span-full">No se encontraron productos en la página.</p>';
+                return;
+            }
+            resultsDiv.innerHTML = products.map(product => `
+                <div class="bg-white p-4 rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300">
+                    <img src="${product.image || ''}" alt="${product.title}" class="w-full h-48 object-contain mb-4 rounded-lg">
+                    <h2 class="text-lg font-semibold text-gray-800 line-clamp-2">${product.title}</h2>
+                    <p class="text-gray-600 font-medium mt-2">${product.price || 'Precio no disponible'}</p>
+                    <a href="${product.link || '#'}" target="_blank" class="inline-block mt-3 text-blue-600 hover:text-blue-800 font-medium transition-colors">Ver Producto</a>
+                </div>
+            `).join('');
+        }
+
+        // Manejar envío del formulario
         document.getElementById('scrapeForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const url = document.getElementById('urlInput').value;
             const resultsDiv = document.getElementById('results');
-            resultsDiv.innerHTML = '<p class="text-gray-500">Cargando...</p>';
+            resultsDiv.innerHTML = '<p class="text-gray-500 text-center col-span-full animate-pulse">Cargando...</p>';
 
             try {
                 const response = await fetch('http://localhost:3000/scrape', {
@@ -43,31 +90,26 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ url })
                 });
-                const products = await response.json();
+                products = await response.json();
 
                 if (!Array.isArray(products)) {
-                    resultsDiv.innerHTML = '<p class="text-red-500">Error: No se encontraron productos o la página no es compatible.</p>';
+                    resultsDiv.innerHTML = '<p class="text-red-500 text-center col-span-full">Error: No se encontraron productos o la página no es compatible.</p>';
                     return;
                 }
 
-                if (products.length === 0) {
-                    resultsDiv.innerHTML = '<p class="text-red-500">No se encontraron productos en la página.</p>';
-                    return;
-                }
-
-                resultsDiv.innerHTML = products.map(product => `
-                    <div class="bg-gray-50 p-4 rounded-lg shadow flex flex-col sm:flex-row gap-4">
-                        <img src="${product.image || ''}" alt="${product.title}" class="w-24 h-24 object-contain">
-                        <div class="flex-1">
-                            <h2 class="text-lg font-semibold">${product.title}</h2>
-                            <p class="text-gray-600">${product.price || 'Precio no disponible'}</p>
-                            <a href="${product.link || '#'}" target="_blank" class="text-blue-500 hover:underline">Ver Producto</a>
-                        </div>
-                    </div>
-                `).join('');
+                const sortOption = document.getElementById('sortSelect').value;
+                const sortedProducts = sortProducts(products, sortOption);
+                displayProducts(sortedProducts);
             } catch (error) {
-                resultsDiv.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
+                resultsDiv.innerHTML = `<p class="text-red-500 text-center col-span-full">Error: ${error.message}</p>`;
             }
+        });
+
+        // Manejar cambio en el selector de orden
+        document.getElementById('sortSelect').addEventListener('change', () => {
+            const sortOption = document.getElementById('sortSelect').value;
+            const sortedProducts = sortProducts(products, sortOption);
+            displayProducts(sortedProducts);
         });
     </script>
 </body>
